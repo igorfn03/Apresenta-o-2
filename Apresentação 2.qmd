@@ -1,0 +1,102 @@
+---
+title: "**PRÁTICA ESTATÍSTICA 2**"
+subtitle: "**ATIVIDADE AVALIATIVA 2**"
+author: "Igor Fernandes (<igorfn@id.uff.br>) <br> Marccello Ghellere (<mghellere@id.uff.br>) <br> Gustavo Medeiros (<gmmlima@id.uff.br>)"
+date: today
+date-format: "DD/MM/YYYY"
+institute: "Universidade Federal Fluminense"
+format:
+  revealjs:
+    css: custom.css
+    slide-number: true
+    incremental: false
+    transition: slide
+    background-transition: fade
+    width: 1280
+    height: 720
+    margin: 0.07
+    auto-stretch: false
+    title-slide-attributes:
+      data-background-image: "Capa.png"
+      data-background-size: cover
+---
+
+## {.scrollable}
+
+```{r}
+# Carregando e instalando os pacotes necessários
+require(openxlsx)            # Leitura de base de dados
+require(dplyr)               # Manipulação de base de dados
+require(gtsummary)  # Tabelas automáticas
+require(gt)# Tabelas automáticas
+require(rstatix)  # Coeficiente de Cramer
+require(ggplot2)             # Gráficos
+require(qqplotr)             # Gráficos qqplot
+require(DescTools)           # Teste de Levene
+
+# Lendo a base de dados
+Dados = read.xlsx("DadosFatoresRisco.xlsx")
+
+# Selecionando as variáveis
+DadosQuali = Dados %>% select(Diabetico, IMC, Atividade_Fisica, Saude_Geral,
+                              Faixa_Idade)
+
+# Fazendo a tabela final
+# Função que calcula o coeficiente de Cramer
+cramer_fun <- function(data, variable, by, ...) {
+  tab <- table(data[[variable]], data[[by]])
+  v <- cramer_v(tab)
+  tibble::tibble(`**Cramer**` = round(v, 3))
+}
+
+# Código da tabela
+tbl_summary(data = DadosQuali,
+            by = Diabetico,
+            percent = "row",
+            label = list(
+              IMC ~ "IMC",
+              Atividade_Fisica ~ "Atividade Física",
+              Saude_Geral ~ "Saúde Geral",
+              Faixa_Idade ~"Faixa de Idade"
+            )
+)%>%
+  add_p(pvalue_fun = label_style_pvalue(digits = 3)) %>%
+  bold_p(t = 0.05) %>%
+  add_stat(fns = everything() ~ cramer_fun)%>%
+  modify_spanning_header(all_stat_cols() ~ "**Diabético**") %>%
+  modify_header(label ~ "**Variáveis**") %>%
+  bold_labels() %>%
+  modify_header(all_stat_cols() ~ "**{level}**<br>{n} ({style_percent(p)}%)")%>%
+  modify_bold(columns = stat_1,rows = (variable == "Atividade_Fisica" &
+      label %in% c("Não", "Sim"))) %>%
+  modify_bold(columns = stat_2,rows = (variable == "Atividade_Fisica" &
+        label %in% c("Não", "Sim"))) %>%
+  modify_bold(columns = stat_1,rows = (variable == "Saude_Geral" &
+        label %in% c(
+          "Boa",
+          "Excelente/Muito boa",
+          "Razoável/Ruim"))) %>%
+  modify_bold(columns = stat_2,rows = (variable == "Saude_Geral" &
+        label %in% c(
+          "Boa",
+          "Excelente/Muito boa",
+          "Razoável/Ruim"))) %>%
+  modify_bold(columns = stat_1,rows = (variable == "Faixa_Idade" &label == "18 a 44 anos")) %>%
+  modify_bold(columns = stat_2,rows = (variable == "Faixa_Idade" &
+      label == "18 a 44 anos")) %>%
+  modify_footnote(everything() ~ NA)%>%
+  as_gt() %>%                   
+  fmt_markdown(columns = label) %>%
+  tab_options(
+    table.font.size = "20px",    
+    heading.title.font.size = "26px",
+    column_labels.font.size = "22px"
+  )
+
+```
+
+## CONCLUSÃO
+
+Aqui pode ser escrita a conclusão
+
+# FIM
