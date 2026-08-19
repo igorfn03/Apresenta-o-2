@@ -4,7 +4,7 @@ install.packages("openxlsx")
 require(dplyr)               # Manipulação de base de dados
 require(gtsummary)  
 install.packages("gtsummary")# Tabelas automáticas
-require(gt)       ]
+require(gt)
 install.packages("gt")# Tabelas automáticas
 require(rstatix)  
 install.packages("rstatix")# Coeficiente de Cramer
@@ -32,6 +32,7 @@ chisq.test(Dados$Saude_Geral,Dados$Diabetico)$expected
 chisq.test(Dados$Faixa_Idade,Dados$Diabetico)$expected
 
 # Investigando os resíduos padronizados
+chisq.test(Dados$IMC,Dados$Diabetico)$stdres
 chisq.test(Dados$Atividade_Fisica,Dados$Diabetico)$stdres
 chisq.test(Dados$Saude_Geral,Dados$Diabetico)$stdres
 chisq.test(Dados$Faixa_Idade,Dados$Diabetico)$stdres
@@ -41,7 +42,149 @@ A=table(Dados$IMC,Dados$Diabetico)
 cramer_v(A)
 B=table(Dados$Atividade_Fisica,Dados$Diabetico)
 cramer_v(B)
-C=table(Dados$Faixa_Idade,Dados$Diabetico)
+C=table(Dados$Saude_Geral,Dados$Diabetico)
 cramer_v(C)
+D=table(Dados$Faixa_Idade,Dados$Diabetico)
+cramer_v(D)
 
 # Fazendo a tabela final
+
+# Função que calcula o coeficiente de Cramér
+cramer_fun <- function(data, variable, by, ...) {
+  tab <- table(data[[variable]], data[[by]])
+  v <- cramer_v(tab)
+  tibble::tibble(`**Cramér**` = round(v, 3))
+}
+
+
+# Tabela
+tbl_summary(
+  data = DadosQuali,
+  by = Diabetico,
+  percent = "row",
+  label = list(
+    IMC ~ "IMC<sup>",
+    Atividade_Fisica ~ "Atividade Física<sup>",
+    Saude_Geral ~ "Saúde Geral<sup>",
+    Faixa_Idade ~ "Faixa de Idade<sup>"
+  )
+) %>%
+  
+  # Valor-p
+  add_p(
+    pvalue_fun = label_style_pvalue(digits = 3)
+  ) %>%
+  
+  # Cramér V
+  add_stat(
+    fns = everything() ~ cramer_fun
+  ) %>%
+  
+  # Cabeçalho
+  modify_spanning_header(
+    all_stat_cols() ~ "**Diabetes**"
+  ) %>%
+  
+  modify_header(
+    label ~ "**Variáveis**"
+  ) %>%
+  
+  bold_labels() %>%
+  
+  modify_header(
+    all_stat_cols() ~ "**{level}**<br>{n} ({style_percent(p)}%)"
+  ) %>%
+  
+  # ------------------------------------------------
+# ATIVIDADE FÍSICA
+# Resíduos:
+# Não × Não = -2.656
+# Sim × Não =  2.656
+# Não × Sim =  2.656
+# Sim × Sim = -2.656
+# Todas significativas
+# ------------------------------------------------
+
+modify_bold(
+  columns = stat_1,
+  rows = (
+    variable == "Atividade_Fisica" &
+      label %in% c("Não", "Sim")
+  )
+) %>%
+  
+  modify_bold(
+    columns = stat_2,
+    rows = (
+      variable == "Atividade_Fisica" &
+        label %in% c("Não", "Sim")
+    )
+  ) %>%
+  
+  # ------------------------------------------------
+# SAÚDE GERAL
+# Todas as categorias são significativas
+# ------------------------------------------------
+
+modify_bold(
+  columns = stat_1,
+  rows = (
+    variable == "Saude_Geral" &
+      label %in% c(
+        "Boa",
+        "Excelente/Muito boa",
+        "Razoável/Ruim"
+      )
+  )
+) %>%
+  
+  modify_bold(
+    columns = stat_2,
+    rows = (
+      variable == "Saude_Geral" &
+        label %in% c(
+          "Boa",
+          "Excelente/Muito boa",
+          "Razoável/Ruim"
+        )
+    )
+  ) %>%
+  
+  # ------------------------------------------------
+# FAIXA DE IDADE
+# Somente 18 a 44 anos é significativa
+# ------------------------------------------------
+
+modify_bold(
+  columns = stat_1,
+  rows = (
+    variable == "Faixa_Idade" &
+      label == "18 a 44 anos"
+  )
+) %>%
+  
+  modify_bold(
+    columns = stat_2,
+    rows = (
+      variable == "Faixa_Idade" &
+        label == "18 a 44 anos"
+    )
+  ) %>%
+  
+  # Remove notas de rodapé
+  modify_footnote(
+    everything() ~ NA
+  ) %>%
+  
+  # Converte para GT
+  as_gt() %>%
+  
+  fmt_markdown(
+    columns = label
+  ) %>%
+  
+  tab_options(
+    table.font.size = "20px",
+    heading.title.font.size = "26px",
+    column_labels.font.size = "22px"
+  )
